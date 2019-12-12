@@ -5,7 +5,9 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
+
 
 namespace SekwencjomatTranscoder
 {
@@ -34,9 +36,20 @@ namespace SekwencjomatTranscoder
             }
 
             var parser = new FileIniDataParser();
-            IniData data = parser.ReadFile(INIfilePath);
+            IniData data = parser.ReadFile(@"..\..\test.ini");
 
-            Console.WriteLine(data["Test"]["testvalue"]); 
+            //Console.WriteLine(data["LocalFiles"]["FFmpeg"]); 
+            //Console.WriteLine(data["LocalFiles"]["ReferenceVideoFile"]);
+            var codecString = Regex.Replace(data["TranscodingParameters"]["Codec"], @"\s+", "");
+            var codecList = new List<string>(codecString.Split(',').ToList());
+
+            foreach (var item in codecList)
+                Console.WriteLine($"List Item: {item}");
+
+            //Console.WriteLine(data["TranscodingParameters"]["Codec"]); 
+            //Console.WriteLine(data["TranscodingParameters"]["Containes"]); 
+            //Console.WriteLine(data["TranscodingParameters"]["Bitrate"]); 
+
             Console.ReadKey();
         }
     }
