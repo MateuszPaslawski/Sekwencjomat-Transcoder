@@ -21,10 +21,17 @@ namespace SekwencjomatTranscoder
         private static string FFmpegPath = string.Empty;
         private static string InputPath = string.Empty;
         private static string OutputPath = Path.Combine(Path.GetDirectoryName(Assembly.GetEntryAssembly().Location), "output");
+        private static string TemplatePath = Path.Combine(INIfilePath, "szablon.ini");
         private static List<string>  listCodecs;
         private static List<string>  listContainers;
         private static List<string>  listBitrates;
         private static List<string> listResolutions;
+
+        private static void EmbeddedTemplateToDisk()
+        {
+            byte[] byte_array = Encoding.UTF8.GetBytes( Properties.Resources.templateINI);
+            File.WriteAllBytes(TemplatePath, byte_array);
+        }
 
         static void Main(string[] args)
         {
@@ -61,11 +68,48 @@ namespace SekwencjomatTranscoder
                 }
             }
 
+
+
+
+
             if(!CheckINIPath())
             {
+                Console.BackgroundColor = ConsoleColor.Black;
+                Console.ForegroundColor = ConsoleColor.Yellow;
+                Console.WriteLine($"Nie znaleziono pliku inicjalizacyjnego, czy chcesz utworzyć i edytować szablon w lokalizacji programu?" +
+                    $"\nSzablon zawiera opis oraz przykładowe wartości.");
+                Console.ForegroundColor = ConsoleColor.Cyan;
+                Console.Write($"[T]ak\t[N]ie\n");
+
+                string key;
+
+                while (true)
+                {
+                    Console.Write(">");
+                    key = Console.ReadKey(true).KeyChar.ToString().ToLower();
+
+                    if (key == "t" || key == "n")
+                        break;
+                }
+                Console.WriteLine();
+                Console.WriteLine();
+                if (key == "t")
+                {
+                    EmbeddedTemplateToDisk();
+                    var proc = new Process();
+                    proc.StartInfo.Arguments = TemplatePath;
+                    proc.StartInfo.FileName = "notepad.exe";
+                    proc.Start();
+                    return;
+                }
+
+                Console.BackgroundColor = ConsoleColor.Red;
+                Console.ForegroundColor = ConsoleColor.Black;
                 Console.WriteLine($"Plik inicjalizacyjny nie został podany bądź nie istnieje.");
                 Console.WriteLine($"Podana ścieżka: [{INIfilePath}]");
+                Console.WriteLine();
                 Console.ReadKey();
+                return;
             }
 
             FillGlobalVariables();
@@ -142,8 +186,8 @@ namespace SekwencjomatTranscoder
                             Console.ForegroundColor = ConsoleColor.Gray;
                             Console.WriteLine($"\nŚcieżka pliku:");
                             Console.ForegroundColor = ConsoleColor.Yellow;
-                            Console.Write($"{outputfile,10}");
-                            Console.ForegroundColor = ConsoleColor.White;
+                            Console.Write($"{outputfile,10}\n\n");
+                            Console.ForegroundColor = ConsoleColor.DarkGray;
 
                             proc.Start();
                             proc.WaitForExit();
@@ -182,8 +226,8 @@ namespace SekwencjomatTranscoder
                             Console.ForegroundColor = ConsoleColor.Gray;
                             Console.WriteLine($"\nŚcieżka pliku:");
                             Console.ForegroundColor = ConsoleColor.Yellow;
-                            Console.Write($"{outputfile,10}");
-                            Console.ForegroundColor = ConsoleColor.White;
+                            Console.Write($"{outputfile,10}\n\n");
+                            Console.ForegroundColor = ConsoleColor.DarkGray;
 
                             proc.Start();
                             proc.WaitForExit();
@@ -214,8 +258,8 @@ namespace SekwencjomatTranscoder
                         Console.ForegroundColor = ConsoleColor.Gray;
                         Console.WriteLine($"\nŚcieżka pliku:");
                         Console.ForegroundColor = ConsoleColor.Yellow;
-                        Console.Write($"{outputfile,10}");
-                        Console.ForegroundColor = ConsoleColor.White;
+                        Console.Write($"{outputfile,10}\n\n");
+                        Console.ForegroundColor = ConsoleColor.DarkGray;
 
                         proc.Start();
                         proc.WaitForExit();
@@ -262,8 +306,8 @@ namespace SekwencjomatTranscoder
                                 Console.ForegroundColor = ConsoleColor.Gray;
                                 Console.WriteLine($"\nŚcieżka pliku:");
                                 Console.ForegroundColor = ConsoleColor.Yellow;
-                                Console.Write($"{outputfile,10}");
-                                Console.ForegroundColor = ConsoleColor.White;
+                                Console.Write($"{outputfile,10}\n\n");
+                                Console.ForegroundColor = ConsoleColor.DarkGray;
 
                                 proc.Start();
                                 proc.WaitForExit();
@@ -274,6 +318,7 @@ namespace SekwencjomatTranscoder
                 }
 
             }
+
             Console.Clear();
             Console.BackgroundColor = ConsoleColor.Green;
             Console.ForegroundColor = ConsoleColor.Black;
@@ -320,7 +365,7 @@ namespace SekwencjomatTranscoder
             var parser = new FileIniDataParser();
             IniData data = parser.ReadFile(INIfilePath);
 
-            InputPath = Path.GetFullPath(data["LocalFiles"]["ReferenceVideoFile"].Replace("\"",""));
+            InputPath = Path.GetFullPath(data["LocalFiles"]["InputFile"].Replace("\"",""));
             FFmpegPath = Path.GetFullPath(data["LocalFiles"]["FFmpeg"].Replace("\"", ""));
             if (data["LocalFiles"]["OutputDirectory"].Trim() != string.Empty)
                 OutputPath = Path.GetFullPath(data["LocalFiles"]["OutputDirectory"].Replace("\"", ""));
