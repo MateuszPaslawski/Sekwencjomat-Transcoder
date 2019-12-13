@@ -58,21 +58,16 @@ namespace SekwencjomatTranscoder
                     return;
                 }
             }
-
             if (args.Count() == 0)
             {
                 foreach (var item in new DirectoryInfo(INISearchPath).GetFiles())
                 {
-                    if (new FileInfo(item.FullName.ToString()).Extension == ".ini")
+                    FileInfo fi = new FileInfo(item.FullName);
+                    if (fi.Extension == ".ini" && fi.Name.ToLower() != "desktop.ini")
                         INIfilePath = item.FullName.ToString();
                 }
             }
-
-
-
-
-
-            if(!CheckINIPath())
+            if (!CheckINIPath())
             {
                 Console.BackgroundColor = ConsoleColor.Black;
                 Console.ForegroundColor = ConsoleColor.Yellow;
@@ -111,7 +106,6 @@ namespace SekwencjomatTranscoder
                 Console.ReadKey();
                 return;
             }
-
             FillGlobalVariables();
 
             string pathCheck = CheckAllPaths();
@@ -134,7 +128,6 @@ namespace SekwencjomatTranscoder
                 Console.ReadKey();
                 return;
             }
-
             Console.BackgroundColor = ConsoleColor.Black;
             Console.ForegroundColor = ConsoleColor.White;
 
@@ -364,7 +357,7 @@ namespace SekwencjomatTranscoder
         {
             var parser = new FileIniDataParser();
             IniData data = parser.ReadFile(INIfilePath);
-
+            Console.WriteLine(INIfilePath);
             InputPath = Path.GetFullPath(data["LocalFiles"]["InputFile"].Replace("\"",""));
             FFmpegPath = Path.GetFullPath(data["LocalFiles"]["FFmpeg"].Replace("\"", ""));
             if (data["LocalFiles"]["OutputDirectory"].Trim() != string.Empty)
