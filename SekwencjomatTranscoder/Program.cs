@@ -9,27 +9,28 @@ using System.Reflection;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
-using System.Threading.Tasks;
 
 
 namespace SekwencjomatTranscoder
 {
     class Program
     {
+        private static readonly string AssemblyLocation = Path.GetDirectoryName(Assembly.GetEntryAssembly().Location);
         private static string INIfilePath = string.Empty;
-        private static string INISearchPath = Path.GetDirectoryName(Assembly.GetEntryAssembly().Location);
         private static string FFmpegPath = string.Empty;
         private static string InputPath = string.Empty;
-        private static string OutputPath = Path.Combine(Path.GetDirectoryName(Assembly.GetEntryAssembly().Location), "output");
-        private static string TemplatePath = Path.Combine(INIfilePath, "szablon.ini");
-        private static List<string>  listCodecs;
-        private static List<string>  listContainers;
-        private static List<string>  listBitrates;
-        private static List<string> listResolutions;
+        private static string OutputPath = Path.Combine(AssemblyLocation, "output");
+        private static readonly string TemplatePath = Path.Combine(INIfilePath, "szablon.ini");
+
+        private static List<string> ListOfCodecs;
+        private static List<string> ListOfContainers;
+        private static List<string> ListOfBitrates;
+        private static List<string> ListOfResolutions;
+        private static List<List<string>> ListOfParamsList;
 
         private static void EmbeddedTemplateToDisk()
         {
-            byte[] byte_array = Encoding.UTF8.GetBytes( Properties.Resources.templateINI);
+            byte[] byte_array = Encoding.UTF8.GetBytes(Properties.Resources.templateINI);
             File.WriteAllBytes(TemplatePath, byte_array);
         }
 
@@ -37,6 +38,7 @@ namespace SekwencjomatTranscoder
         {
             Console.BackgroundColor = ConsoleColor.Red;
             Console.ForegroundColor = ConsoleColor.Black;
+
             if (args.Count() > 1)
             {
                 Console.WriteLine($"Podano niewłaściwą ilośc argumentów: [{args.Count()}]\nMaksymalna wartość to: 1");
@@ -58,15 +60,19 @@ namespace SekwencjomatTranscoder
                     return;
                 }
             }
+
             if (args.Count() == 0)
             {
-                foreach (var item in new DirectoryInfo(INISearchPath).GetFiles())
+                foreach (FileInfo file in new DirectoryInfo(AssemblyLocation).GetFiles())
                 {
-                    FileInfo fi = new FileInfo(item.FullName);
+                    FileInfo fi = new FileInfo(file.FullName);
                     if (fi.Extension == ".ini" && fi.Name.ToLower() != "desktop.ini")
-                        INIfilePath = item.FullName.ToString();
+                    {
+                        INIfilePath = file.FullName.ToString();
+                    }
                 }
             }
+
             if (!CheckINIPath())
             {
                 Console.BackgroundColor = ConsoleColor.Black;
@@ -84,14 +90,16 @@ namespace SekwencjomatTranscoder
                     key = Console.ReadKey(true).KeyChar.ToString().ToLower();
 
                     if (key == "t" || key == "n")
+                    {
                         break;
+                    }
                 }
                 Console.WriteLine();
                 Console.WriteLine();
                 if (key == "t")
                 {
                     EmbeddedTemplateToDisk();
-                    var proc = new Process();
+                    Process proc = new Process();
                     proc.StartInfo.Arguments = TemplatePath;
                     proc.StartInfo.FileName = "notepad.exe";
                     proc.Start();
@@ -106,28 +114,30 @@ namespace SekwencjomatTranscoder
                 Console.ReadKey();
                 return;
             }
+
             FillGlobalVariables();
 
             string pathCheck = CheckAllPaths();
+
             if (pathCheck != string.Empty)
             {
                 Console.WriteLine($"Plik bądź ścieżka nie istnieją: {pathCheck}");
                 Console.ReadKey();
+                return;
             }
-
-
-            if (listCodecs.Count == 0)
+            if (ListOfCodecs.Count == 0)
             {
                 Console.WriteLine("Liczba wybranych kodeków wideo nie może być równa 0. Wybierz przynajmniej jeden.");
                 Console.ReadKey();
                 return;
             }
-            if (listContainers.Count == 0)
+            if (ListOfContainers.Count == 0)
             {
                 Console.WriteLine("Liczba wybranych kontenerów wideo nie może być równa 0. Wybierz przynajmniej jeden.");
                 Console.ReadKey();
                 return;
             }
+
             Console.BackgroundColor = ConsoleColor.Black;
             Console.ForegroundColor = ConsoleColor.White;
 
@@ -137,19 +147,19 @@ namespace SekwencjomatTranscoder
             Stopwatch sw = new Stopwatch();
             sw.Start();
 
-            foreach (var codec in listCodecs)
+            foreach (string codec in ListOfCodecs)
             {
                 //codec/
                 string codecPath = Path.Combine(OutputPath, codec);
                 Directory.CreateDirectory(codecPath);
-                foreach (var container in listContainers)
+                foreach (string container in ListOfContainers)
                 {
                     //codec/container/
                     string containerPath = Path.Combine(codecPath, container);
                     Directory.CreateDirectory(containerPath);
-                    if (listBitrates.Count == 0 && listResolutions.Count > 0)
+                    if (ListOfBitrates.Count == 0 && ListOfResolutions.Count > 0)
                     {
-                        foreach (var resolution in listResolutions)
+                        foreach (string resolution in ListOfResolutions)
                         {
                             Process proc = new Process();
                             proc.StartInfo.FileName = FFmpegPath;
@@ -185,11 +195,10 @@ namespace SekwencjomatTranscoder
                             proc.Start();
                             proc.WaitForExit();
                         }
-
                     }
-                    else if (listBitrates.Count > 0 && listResolutions.Count == 0)
+                    else if (ListOfBitrates.Count > 0 && ListOfResolutions.Count == 0)
                     {
-                        foreach (var bitrate in listBitrates)
+                        foreach (string bitrate in ListOfBitrates)
                         {
                             Process proc = new Process();
                             proc.StartInfo.FileName = FFmpegPath;
@@ -226,7 +235,7 @@ namespace SekwencjomatTranscoder
                             proc.WaitForExit();
                         }
                     }
-                    else if (listBitrates.Count == 0 && listResolutions.Count == 0)
+                    else if (ListOfBitrates.Count == 0 && ListOfResolutions.Count == 0)
                     {
                         Process proc = new Process();
                         proc.StartInfo.FileName = FFmpegPath;
@@ -257,15 +266,15 @@ namespace SekwencjomatTranscoder
                         proc.Start();
                         proc.WaitForExit();
                     }
-                    else if (listBitrates.Count > 0 && listResolutions.Count > 0)
+                    else if (ListOfBitrates.Count > 0 && ListOfResolutions.Count > 0)
                     {
-                        foreach (var resolution in listResolutions)
+                        foreach (string resolution in ListOfResolutions)
                         {
                             //codec/container/resolution
                             string resolutionPath = Path.Combine(containerPath, resolution);
                             Directory.CreateDirectory(resolutionPath);
 
-                            foreach (var bitrate in listBitrates)
+                            foreach (string bitrate in ListOfBitrates)
                             {
                                 Process proc = new Process();
                                 proc.StartInfo.FileName = FFmpegPath;
@@ -328,7 +337,7 @@ namespace SekwencjomatTranscoder
             Console.SetCursorPosition(0, Console.CursorTop - 1);
             Thread.Sleep(1000);
 
-            Process.Start($"explorer.exe", OutputPath);
+            Process.Start("explorer.exe", OutputPath);
         }
 
         static List<string> INIstringToList(string INIstring, string INIvalue)
@@ -337,16 +346,19 @@ namespace SekwencjomatTranscoder
             {
                 string trimmedInput = Regex.Replace(INIstring, @"\s+", "").Trim();
                 if (trimmedInput != string.Empty)
+                {
                     return new List<string>(trimmedInput.Split(',').ToList());
+                }
                 else
+                {
                     return new List<string>();
-
+                }
             }
             catch
             {
                 Console.BackgroundColor = ConsoleColor.Red;
                 Console.ForegroundColor = ConsoleColor.Black;
-                Console.WriteLine($"Brak wartości [{INIvalue}] sekcji [TranscodingParameters] w pliku inicjalizacyjnym.");
+                Console.WriteLine($"Brak wartości [{INIvalue}] w sekcji [TranscodingParameters] w pliku inicjalizacyjnym.");
                 Console.WriteLine($"Ścieżka pliku: {INIfilePath}");
                 Console.ReadKey();
                 return null;
@@ -355,43 +367,49 @@ namespace SekwencjomatTranscoder
 
         static void FillGlobalVariables()
         {
-            var parser = new FileIniDataParser();
-            IniData data = parser.ReadFile(INIfilePath);
-            Console.WriteLine(INIfilePath);
-            InputPath = Path.GetFullPath(data["LocalFiles"]["InputFile"].Replace("\"",""));
-            FFmpegPath = Path.GetFullPath(data["LocalFiles"]["FFmpeg"].Replace("\"", ""));
-            if (data["LocalFiles"]["OutputDirectory"].Trim() != string.Empty)
-                OutputPath = Path.GetFullPath(data["LocalFiles"]["OutputDirectory"].Replace("\"", ""));
+            FileIniDataParser parser = new FileIniDataParser();
+            IniData iniString = parser.ReadFile(INIfilePath);
 
-            listCodecs = INIstringToList(data["TranscodingParameters"]["Codec"], "Codec");
-            listContainers = INIstringToList(data["TranscodingParameters"]["Container"], "Container");
-            listBitrates = INIstringToList(data["TranscodingParameters"]["Bitrate"], "Bitrate");
-            listResolutions = INIstringToList(data["TranscodingParameters"]["Resolution"], "Resolution");
+            InputPath = Path.GetFullPath(iniString["LocalFiles"]["InputFile"].Replace("\"", ""));
+            FFmpegPath = Path.GetFullPath(iniString["LocalFiles"]["FFmpeg"].Replace("\"", ""));
+
+            if (iniString["LocalFiles"]["OutputDirectory"].Trim() != string.Empty)
+            {
+                OutputPath = Path.GetFullPath(iniString["LocalFiles"]["OutputDirectory"].Replace("\"", ""));
+            }
+
+            ListOfCodecs = INIstringToList(iniString["TranscodingParameters"]["Codec"], "Codec");
+            ListOfContainers = INIstringToList(iniString["TranscodingParameters"]["Container"], "Container");
+            ListOfBitrates = INIstringToList(iniString["TranscodingParameters"]["Bitrate"], "Bitrate");
+            ListOfResolutions = INIstringToList(iniString["TranscodingParameters"]["Resolution"], "Resolution");
+
+            ListOfParamsList = new List<List<string>> { ListOfCodecs, ListOfContainers, ListOfBitrates, ListOfResolutions };
+
         }
 
         static int CountAllFilesToTranscode()
         {
             int counter = 1;
-            counter *= listCodecs.Count;
-            counter *= listContainers.Count;
 
-            if (listBitrates.Count > 0)
-                counter *= listBitrates.Count;
-
-            if (listResolutions.Count > 0)
-                counter *= listResolutions.Count;
+            foreach (List<string> list in ListOfParamsList)
+            {
+                if (list.Count > 0)
+                    counter *= list.Count;
+            }
 
             return counter;
         }
 
         static string CheckAllPaths()
         {
-            var filesList = new List<string> { FFmpegPath, InputPath };
+            List<string> filesList = new List<string> { FFmpegPath, InputPath };
 
-            foreach (var item in filesList)
+            foreach (string item in filesList)
             {
                 if (!File.Exists(item))
+                {
                     return item;
+                }
             }
 
             Directory.CreateDirectory(OutputPath);
@@ -402,9 +420,13 @@ namespace SekwencjomatTranscoder
         static bool CheckINIPath()
         {
             if (!File.Exists(INIfilePath))
+            {
                 return false;
+            }
             else
+            {
                 return true;
+            }
         }
     }
 }

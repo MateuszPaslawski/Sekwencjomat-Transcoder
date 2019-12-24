@@ -65,17 +65,18 @@ namespace SekwencjomatTranscoder.Properties {
         ///;Każdy element może posiadać maksymalnie jedną wartość
         ///[LocalFiles]
         ///
-        ///	;Ścieżka pliku wykonywalnego programu ffmpeg.exe
+        ///	;Ścieżka pliku wykonywalnego programu FFmpeg
         ///	FFmpeg = F:\ffmpeg.exe
         ///	
         ///	;Ścieżka pliku referencyjnego, podawanego na wejście transkodera
         ///	InputFile = F:\input.avi
         ///	
         ///	;Katalog wyjściowy, w którym zapisywane będą wyniki procesu
-        ///	;Brak wartości będzie skutkował utworzeniem katalogu &quot;output&quot; w lokalizacji programu
+        ///	;Brak wartości skutkował będzie utworzeniem katalogu &quot;/output&quot; w lokalizacji programu
         ///	OutputDirectory = F:\output
         ///	
-        ///;Listy parametrów rządanego pliku wideo        /// [rest of string was truncated]&quot;;.
+        ///;Listy parametrów żądanego pliku wideo
+        ///;Wi [rest of string was truncated]&quot;;.
         /// </summary>
         internal static string templateINI {
             get {
