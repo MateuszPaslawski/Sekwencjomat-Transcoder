@@ -24,5 +24,10 @@ namespace SekwencjomatTranscoder
         {
             return input.Replace(stringToRemove, string.Empty);
         }
+
+        public static string TimeSpanConverter(this string input)
+        {
+            return input.Replace(":", "-") + "s";
+        }
     }
 }
