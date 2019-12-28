@@ -37,6 +37,8 @@ namespace SekwencjomatTranscoder
         public static string CurrentFPS = string.Empty;
         public static string CurrentChromaSubsampling = string.Empty;
         public static string CurrentFilePath = string.Empty;
+        public static TimeSpan CurrentElapsedTime = TimeSpan.FromMilliseconds(0);
+
 
         private static List<List<string>> ListOfParamsLists;
 
@@ -130,7 +132,9 @@ namespace SekwencjomatTranscoder
 
         public void ExecuteFFmpeg()
         {
-            ConsoleLogger.StartOutput();
+            Stopwatch sw = new Stopwatch();
+            sw.Start();
+
             int currentCounter = 0;
 
             foreach (string timespan in ListOfTimeSpans)
@@ -260,6 +264,9 @@ namespace SekwencjomatTranscoder
                                         CurrentFPS = Regex.Match(output_fps, @"\d.").Value;
                                         CurrentChromaSubsampling = output_chroma;
                                         CurrentFile = ++currentCounter;
+                                        CurrentElapsedTime = sw.Elapsed;
+                                        
+                                        new ConsoleLogger().WriteOutput();
                                         RunFFmpegProcess(FFmpegArgs);
                                     }
                                 }
