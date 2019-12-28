@@ -8,6 +8,7 @@ using System.Linq;
 using System.Reflection;
 using System.Text;
 using System.Text.RegularExpressions;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace SekwencjomatTranscoder
@@ -28,6 +29,18 @@ namespace SekwencjomatTranscoder
         public static List<string> ListOfFPS;
         public static List<string> ListOfChromaSubsampling;
 
+        public static string CurrentTimeSpan = "0:0";
+        public static string CurrentCodec = string.Empty;
+        public static string CurrentContainer = string.Empty;
+        public static string CurrentBitrate = string.Empty;
+        public static string CurrentResolution = string.Empty;
+        public static string CurrentFPS = string.Empty;
+        public static string CurrentChromaSubsampling = string.Empty;
+        public static string CurrentFilePath = string.Empty;
+        public static int CurrentFile = 1;
+        public static int FilesCount = 1;
+
+
         private static List<List<string>> ListOfParamsLists;
 
 
@@ -35,6 +48,8 @@ namespace SekwencjomatTranscoder
         {
             INIPath = iniPath;
             ReadFromINI();
+
+            FilesCount = CountAllFilesToTranscode();
         }
 
 
@@ -64,7 +79,6 @@ namespace SekwencjomatTranscoder
 
             ListOfParamsLists = new List<List<string>> { ListOfCodecs, ListOfContainers, ListOfBitrates, ListOfResolutions, ListOfTimeSpans, ListOfFPS, ListOfChromaSubsampling };
         }
-
 
         static List<string> INIstringToList(string INIstring, string INIvalue)
         {
@@ -96,6 +110,7 @@ namespace SekwencjomatTranscoder
                 if (list.Count > 0)
                     counter *= list.Count;
 
+            FilesCount = counter;
             return counter;
         }
 
@@ -114,13 +129,8 @@ namespace SekwencjomatTranscoder
 
         public void ExecuteFFmpeg()
         {
-            int filesCount = CountAllFilesToTranscode();
+            ConsoleLogger.StartOutput();
             int currentCounter = 0;
-
-            Stopwatch sw = new Stopwatch();
-            sw.Start();
-
-            //string FFmpegEndingArgs = $@" ""{outputfile}""";
 
             foreach (string timespan in ListOfTimeSpans)
             {
@@ -145,9 +155,12 @@ namespace SekwencjomatTranscoder
                     FFmpegArgs = timespan_previousFFmpegArgs;
                     string codec_previousFFmpegArgs = FFmpegArgs;
 
+                    string output_codec = string.Empty;
+
                     if (codec != "empty")
                     {
                         //timespan/codec
+                        output_codec = codec;
                         currentDir = Path.Combine(currentDir, codec);
                         FFmpegArgs += $"-vcodec {codec.CodecToFFmpegSyntax()} ";
                         codec_previousFFmpegArgs = FFmpegArgs;
@@ -160,17 +173,13 @@ namespace SekwencjomatTranscoder
                         FFmpegArgs = codec_previousFFmpegArgs;
                         string container_previousFFmpegArgs = FFmpegArgs;
 
-                        string outputContainer = container;
+                        string output_Container = Path.GetExtension(InputPath);
                         if (container != "empty")
                         {
                             //timespan/codec/container
+                            output_Container = container;
                             currentDir = Path.Combine(currentDir, container);
                         }
-                        else if (container == "empty")
-                        {
-                            outputContainer = Path.GetExtension(InputPath);
-                        }
-
 
 
                         foreach (string bitrate in ListOfBitrates)
@@ -178,8 +187,11 @@ namespace SekwencjomatTranscoder
                             FFmpegArgs = container_previousFFmpegArgs;
                             string bitrate_previousFFmpegArgs = FFmpegArgs;
 
+                            string output_bitrate = string.Empty;
+
                             if (bitrate != "empty")
                             {
+                                output_bitrate = bitrate + "k";
                                 FFmpegArgs += $"-b:v {bitrate}k ";
                                 bitrate_previousFFmpegArgs = FFmpegArgs;
                             }
@@ -191,8 +203,11 @@ namespace SekwencjomatTranscoder
                                 FFmpegArgs = bitrate_previousFFmpegArgs;
                                 string resolution_previousFFmpegArgs = FFmpegArgs;
 
+                                string output_resolution = string.Empty;
+
                                 if (resolution != "empty")
                                 {
+                                    output_resolution = resolution;
                                     FFmpegArgs += $"-vf scale={resolution.Replace('x',':')} ";
                                     resolution_previousFFmpegArgs = FFmpegArgs;
                                 }
@@ -203,8 +218,11 @@ namespace SekwencjomatTranscoder
                                     FFmpegArgs = resolution_previousFFmpegArgs;
                                     string fps_previousFFmpegArgs = FFmpegArgs;
 
+                                    string output_fps = string.Empty;
+
                                     if (fps != "empty")
                                     {
+                                        output_fps = $"[{fps}fps]";
                                         FFmpegArgs += $"-filter:v fps=fps={fps} ";
                                         fps_previousFFmpegArgs = FFmpegArgs;
                                     }
@@ -214,12 +232,30 @@ namespace SekwencjomatTranscoder
                                         FFmpegArgs = fps_previousFFmpegArgs;
                                         string chroma_previousFFmpegArgs = FFmpegArgs;
 
+                                        string output_chroma = string.Empty;
+
                                         if (chroma != "empty")
                                         {
+                                            output_chroma = chroma;
                                             FFmpegArgs += $"-pix_fmt {chroma} ";
                                             chroma_previousFFmpegArgs = FFmpegArgs;
                                         }
-                                        Console.WriteLine(FFmpegArgs);
+
+                                        string outputPath = $"{output_resolution} {output_bitrate} {output_chroma} {output_fps}.{output_Container}".Replace("  ", " ").Replace(" ", "_");
+                                        Directory.CreateDirectory(currentDir);
+                                        outputPath = Path.Combine(currentDir, outputPath);
+                                        FFmpegArgs += $"\"{outputPath}\"";
+
+                                        CurrentFilePath = outputPath;
+                                        CurrentTimeSpan = timespan.TimeSpanConverter();
+                                        CurrentCodec = output_codec;
+                                        CurrentContainer = output_Container;
+                                        CurrentBitrate = output_bitrate;
+                                        CurrentResolution = output_resolution;
+                                        CurrentFPS = fps;
+                                        CurrentChromaSubsampling = output_chroma;
+                                        CurrentFile = ++currentCounter;
+                                        RunFFmpegProcess(FFmpegArgs);
                                     }
                                 }
                             }
@@ -227,182 +263,18 @@ namespace SekwencjomatTranscoder
                     }
                 }
             }
-                
-            
-            Console.ReadKey();
-            return;
-
-            foreach (string codec in ListOfCodecs)
-            {
-                //codec/
-                string codecPath = Path.Combine(OutputDirectory, codec);
-                Directory.CreateDirectory(codecPath);
-                foreach (string container in ListOfContainers)
-                {
-                    //codec/container/
-                    string containerPath = Path.Combine(codecPath, container);
-                    Directory.CreateDirectory(containerPath);
-                    if (ListOfBitrates.Count == 0 && ListOfResolutions.Count > 0)
-                    {
-                        foreach (string resolution in ListOfResolutions)
-                        {
-                            Process proc = new Process();
-                            proc.StartInfo.FileName = FFmpegPath;
-                            string outputfile = Path.Combine(containerPath, $"{resolution}.{container}");
-                            proc.StartInfo.Arguments = $@"-nostats -loglevel 0 -y -i ""{InputPath}"" -vcodec {codec.CodecToFFmpegSyntax()} ""{outputfile}""";
-                            proc.StartInfo.UseShellExecute = false;
-
-                            int precent = (int)((double)++currentCounter / filesCount * 100);
-
-                            Console.Clear();
-                            Console.ForegroundColor = ConsoleColor.DarkYellow;
-                            Console.WriteLine($"Czas od rozpoczęcia: {sw.Elapsed.ToString(@"hh\:mm\:ss")}\t\t");
-                            Console.ForegroundColor = ConsoleColor.Cyan;
-                            Console.WriteLine($"Przetwarzanie pliku: [ {currentCounter} / {filesCount} ] {precent}%");
-                            Console.ForegroundColor = ConsoleColor.Gray;
-                            Console.Write($"Kodek wideo:\t");
-                            Console.ForegroundColor = ConsoleColor.Blue;
-                            Console.WriteLine($"{codec,10}");
-                            Console.ForegroundColor = ConsoleColor.Gray;
-                            Console.Write($"Kontener:\t");
-                            Console.ForegroundColor = ConsoleColor.Blue;
-                            Console.WriteLine($"{container,10}");
-                            Console.ForegroundColor = ConsoleColor.Gray;
-                            Console.Write($"Rozdzielczość:\t");
-                            Console.ForegroundColor = ConsoleColor.Blue;
-                            Console.WriteLine($"{resolution,10}");
-                            Console.ForegroundColor = ConsoleColor.Gray;
-                            Console.WriteLine($"\nŚcieżka pliku:");
-                            Console.ForegroundColor = ConsoleColor.Yellow;
-                            Console.Write($"{outputfile,10}\n\n");
-                            Console.ForegroundColor = ConsoleColor.DarkGray;
-
-                            proc.Start();
-                            proc.WaitForExit();
-                        }
-                    }
-                    else if (ListOfBitrates.Count > 0 && ListOfResolutions.Count == 0)
-                    {
-                        foreach (string bitrate in ListOfBitrates)
-                        {
-                            Process proc = new Process();
-                            proc.StartInfo.FileName = FFmpegPath;
-                            string outputfile = Path.Combine(containerPath, $"{bitrate}k.{container}");
-                            proc.StartInfo.Arguments = $@"-nostats -loglevel 0 -y -i ""{InputPath}"" -vcodec {codec.CodecToFFmpegSyntax()} ""{outputfile}""";
-                            proc.StartInfo.UseShellExecute = false;
-
-                            int precent = (int)((double)++currentCounter / filesCount * 100);
-
-                            Console.Clear();
-                            Console.ForegroundColor = ConsoleColor.DarkYellow;
-                            Console.WriteLine($"Czas od rozpoczęcia: {sw.Elapsed.ToString(@"hh\:mm\:ss")}\t\t");
-                            Console.ForegroundColor = ConsoleColor.Cyan;
-                            Console.WriteLine($"Przetwarzanie pliku: [ {currentCounter} / {filesCount} ] {precent}%");
-                            Console.ForegroundColor = ConsoleColor.Gray;
-                            Console.Write($"Kodek wideo:\t");
-                            Console.ForegroundColor = ConsoleColor.Blue;
-                            Console.WriteLine($"{codec,10}");
-                            Console.ForegroundColor = ConsoleColor.Gray;
-                            Console.Write($"Kontener:\t");
-                            Console.ForegroundColor = ConsoleColor.Blue;
-                            Console.WriteLine($"{container,10}");
-                            Console.ForegroundColor = ConsoleColor.Gray;
-                            Console.Write($"Bitrate:\t");
-                            Console.ForegroundColor = ConsoleColor.Blue;
-                            Console.WriteLine($"{bitrate,10}");
-                            Console.ForegroundColor = ConsoleColor.Gray;
-                            Console.WriteLine($"\nŚcieżka pliku:");
-                            Console.ForegroundColor = ConsoleColor.Yellow;
-                            Console.Write($"{outputfile,10}\n\n");
-                            Console.ForegroundColor = ConsoleColor.DarkGray;
-
-                            proc.Start();
-                            proc.WaitForExit();
-                        }
-                    }
-                    else if (ListOfBitrates.Count == 0 && ListOfResolutions.Count == 0)
-                    {
-                        Process proc = new Process();
-                        proc.StartInfo.FileName = FFmpegPath;
-                        string outputfile = Path.Combine(containerPath, $"{codec}.{container}");
-                        proc.StartInfo.Arguments = $@"-nostats -loglevel 0 -y -i ""{InputPath}"" -vcodec {codec.CodecToFFmpegSyntax()} ""{outputfile}""";
-                        proc.StartInfo.UseShellExecute = false;
-
-                        int precent = (int)((double)++currentCounter / filesCount * 100);
-                        Console.Clear();
-                        Console.ForegroundColor = ConsoleColor.DarkYellow;
-                        Console.WriteLine($"Czas od rozpoczęcia: {sw.Elapsed.ToString(@"hh\:mm\:ss")}\t\t");
-                        Console.ForegroundColor = ConsoleColor.Cyan;
-                        Console.WriteLine($"Przetwarzanie pliku: [ {currentCounter} / {filesCount} ] {precent}%");
-                        Console.ForegroundColor = ConsoleColor.Gray;
-                        Console.Write($"Kodek wideo:\t");
-                        Console.ForegroundColor = ConsoleColor.Blue;
-                        Console.WriteLine($"{codec,10}");
-                        Console.ForegroundColor = ConsoleColor.Gray;
-                        Console.Write($"Kontener:\t");
-                        Console.ForegroundColor = ConsoleColor.Blue;
-                        Console.WriteLine($"{container,10}");
-                        Console.ForegroundColor = ConsoleColor.Gray;
-                        Console.WriteLine($"\nŚcieżka pliku:");
-                        Console.ForegroundColor = ConsoleColor.Yellow;
-                        Console.Write($"{outputfile,10}\n\n");
-                        Console.ForegroundColor = ConsoleColor.DarkGray;
-
-                        proc.Start();
-                        proc.WaitForExit();
-                    }
-                    else if (ListOfBitrates.Count > 0 && ListOfResolutions.Count > 0)
-                    {
-                        foreach (string resolution in ListOfResolutions)
-                        {
-                            //codec/container/resolution
-                            string resolutionPath = Path.Combine(containerPath, resolution);
-                            Directory.CreateDirectory(resolutionPath);
-
-                            foreach (string bitrate in ListOfBitrates)
-                            {
-                                Process proc = new Process();
-                                proc.StartInfo.FileName = FFmpegPath;
-                                string outputfile = Path.Combine(resolutionPath, $"{resolution}-{bitrate}k.{container}");
-                                proc.StartInfo.Arguments = $@"-nostats -loglevel 0 -y -i ""{InputPath}"" -vcodec {codec.CodecToFFmpegSyntax()} ""{outputfile}""";
-                                proc.StartInfo.UseShellExecute = false;
-
-                                int precent = (int)((double)++currentCounter / filesCount * 100);
-
-                                Console.Clear();
-                                Console.ForegroundColor = ConsoleColor.DarkYellow;
-                                Console.WriteLine($"Czas od rozpoczęcia: {sw.Elapsed.ToString(@"hh\:mm\:ss")}\t\t");
-                                Console.ForegroundColor = ConsoleColor.Cyan;
-                                Console.WriteLine($"Przetwarzanie pliku: [ {currentCounter} / {filesCount} ] {precent}%");
-                                Console.ForegroundColor = ConsoleColor.Gray;
-                                Console.Write($"Kodek wideo:\t");
-                                Console.ForegroundColor = ConsoleColor.Blue;
-                                Console.WriteLine($"{codec,10}");
-                                Console.ForegroundColor = ConsoleColor.Gray;
-                                Console.Write($"Kontener:\t");
-                                Console.ForegroundColor = ConsoleColor.Blue;
-                                Console.WriteLine($"{container,10}");
-                                Console.ForegroundColor = ConsoleColor.Gray;
-                                Console.Write($"Rozdzielczość:\t");
-                                Console.ForegroundColor = ConsoleColor.Blue;
-                                Console.WriteLine($"{resolution,10}");
-                                Console.ForegroundColor = ConsoleColor.Gray;
-                                Console.Write($"Bitrate:\t");
-                                Console.ForegroundColor = ConsoleColor.Blue;
-                                Console.WriteLine($"{bitrate,10}");
-                                Console.ForegroundColor = ConsoleColor.Gray;
-                                Console.WriteLine($"\nŚcieżka pliku:");
-                                Console.ForegroundColor = ConsoleColor.Yellow;
-                                Console.Write($"{outputfile,10}\n\n");
-                                Console.ForegroundColor = ConsoleColor.DarkGray;
-
-                                proc.Start();
-                                proc.WaitForExit();
-                            }
-                        }
-                    }
-                }
-            }
         }
+
+        public static void RunFFmpegProcess(string arg)
+        {
+            Process proc = new Process();
+            proc.StartInfo.FileName = FFmpegPath;
+            proc.StartInfo.Arguments = arg;
+            proc.StartInfo.UseShellExecute = false;
+            proc.Start();
+            proc.WaitForExit();
+        }
+
+       
     }
 }

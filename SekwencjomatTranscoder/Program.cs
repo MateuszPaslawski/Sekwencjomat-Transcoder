@@ -47,7 +47,7 @@ namespace SekwencjomatTranscoder
             {
                 Console.WriteLine($"Plik bądź ścieżka nie istnieją: {pathCheck}");
                 Console.ReadKey();
-                return;
+                Environment.Exit(0);
             }
 
             Console.BackgroundColor = ConsoleColor.Black;
