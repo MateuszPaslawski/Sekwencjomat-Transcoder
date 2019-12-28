@@ -37,16 +37,17 @@ namespace SekwencjomatTranscoder
         public static string CurrentFPS = string.Empty;
         public static string CurrentChromaSubsampling = string.Empty;
         public static string CurrentFilePath = string.Empty;
-        public static int CurrentFile = 1;
-        public static int FilesCount = 1;
-
 
         private static List<List<string>> ListOfParamsLists;
+
+        public static int CurrentFile = 1;
+        public static int FilesCount = 1;
 
 
         public INIModel(string iniPath)
         {
             INIPath = iniPath;
+
             ReadFromINI();
 
             FilesCount = CountAllFilesToTranscode();
@@ -134,7 +135,7 @@ namespace SekwencjomatTranscoder
 
             foreach (string timespan in ListOfTimeSpans)
             {
-                string FFmpegArgs = $@"-nostats -loglevel 0 -y -i ""{InputPath}"" ";
+                string FFmpegArgs = $@"-nostats -loglevel 0 -y -i ""{InputPath}"" -cpu-used {Environment.ProcessorCount} ";
                 string timespan_previousFFmpegArgs = FFmpegArgs;
                 string currentDir = OutputDirectory;
 
@@ -241,7 +242,12 @@ namespace SekwencjomatTranscoder
                                             chroma_previousFFmpegArgs = FFmpegArgs;
                                         }
 
-                                        string outputPath = $"{output_resolution} {output_bitrate} {output_chroma} {output_fps}.{output_Container}".Replace("  ", " ").Replace(" ", "_");
+                                        string outputFileName = $"{output_resolution} {output_bitrate} {output_chroma} {output_fps}".Replace("  ", " ").Trim().Replace(" ", "_");
+
+                                        if (outputFileName == string.Empty)
+                                            outputFileName = Path.GetFileNameWithoutExtension(InputPath);
+
+                                        string outputPath = $"{outputFileName}.{output_Container.RemoveString(".")}";
                                         Directory.CreateDirectory(currentDir);
                                         outputPath = Path.Combine(currentDir, outputPath);
                                         FFmpegArgs += $"\"{outputPath}\"";
@@ -252,7 +258,7 @@ namespace SekwencjomatTranscoder
                                         CurrentContainer = output_Container;
                                         CurrentBitrate = output_bitrate;
                                         CurrentResolution = output_resolution;
-                                        CurrentFPS = fps;
+                                        CurrentFPS = output_fps;
                                         CurrentChromaSubsampling = output_chroma;
                                         CurrentFile = ++currentCounter;
                                         RunFFmpegProcess(FFmpegArgs);

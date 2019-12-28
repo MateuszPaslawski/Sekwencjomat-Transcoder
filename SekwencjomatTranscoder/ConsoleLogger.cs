@@ -1,8 +1,5 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Diagnostics;
-using System.Linq;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -10,32 +7,32 @@ namespace SekwencjomatTranscoder
 {
     class ConsoleLogger
     {
-        private static int initialConsoleWidth = 0;
-        private static int initialConsoleHeight = 0;
+        private static int beforeConsoleWidth = 0;
+        private static int beforeConsoleHeight = 0;
+
         public const int margin = 20;
         public static int delay = 50;
         public static char character = '■';
 
-        private static bool canAnimate = true;
+        private static bool canOutput = true;
 
-        public static async Task StartOutput()
+        public static void StartOutput()
         {
-           
+            canOutput = true;
 
             Console.CursorVisible = false;
-            canAnimate = true;
 
             Stopwatch sw = new Stopwatch();
             sw.Start();
 
-            await Task.Run(() =>
+            Task.Run(() =>
             {
-                while (canAnimate)
+                while (canOutput)
                 {
-                    if (initialConsoleWidth != Console.WindowWidth || initialConsoleHeight != Console.WindowHeight)
+                    if (beforeConsoleWidth != Console.WindowWidth || beforeConsoleHeight != Console.WindowHeight)
                     {
-                        initialConsoleWidth = Console.WindowWidth;
-                        initialConsoleHeight = Console.WindowHeight;
+                        beforeConsoleWidth = Console.WindowWidth;
+                        beforeConsoleHeight = Console.WindowHeight;
                         Console.Clear();
                         Console.CursorVisible = false;
                     }
@@ -83,6 +80,7 @@ namespace SekwencjomatTranscoder
                     Thread.Sleep(delay);
                     Console.SetCursorPosition(5, 1);
                     Console.ForegroundColor = ConsoleColor.DarkRed;
+
                     int length = Console.WindowWidth - 25;
                     double ratio = (double)length / max;
                     double j = 1;
@@ -90,10 +88,14 @@ namespace SekwencjomatTranscoder
                     while (j <= current * ratio)
                     {
                         if (j > (length) / 3)
+                        {
                             Console.ForegroundColor = ConsoleColor.DarkYellow;
+                        }
 
                         if (j > 2 * (length) / 3)
+                        {
                             Console.ForegroundColor = ConsoleColor.DarkGreen;
+                        }
 
                         Console.Write(character.ToString());
                         ++j;
@@ -114,12 +116,12 @@ namespace SekwencjomatTranscoder
                     Console.WriteLine($"\t{INIModel.CurrentTimeSpan}");
 
                     Console.ForegroundColor = ConsoleColor.Gray;
-                    Console.Write($"{"Kodek wideo:", margin}");
+                    Console.Write($"{"Kodek wideo:",margin}");
                     Console.ForegroundColor = ConsoleColor.Blue;
                     Console.WriteLine($"\t{INIModel.CurrentCodec}");
 
                     Console.ForegroundColor = ConsoleColor.Gray;
-                    Console.Write($"{"Kontener:", margin}");
+                    Console.Write($"{"Kontener:",margin}");
                     Console.ForegroundColor = ConsoleColor.Blue;
                     Console.WriteLine($"\t{INIModel.CurrentContainer}");
 
@@ -144,11 +146,11 @@ namespace SekwencjomatTranscoder
                     Console.WriteLine($"\t{INIModel.CurrentChromaSubsampling}");
 
                     Console.ForegroundColor = ConsoleColor.Gray;
-                    Console.WriteLine($"\n\nŚcieżka pliku:");
+                    Console.WriteLine($"\n\n{"Ścieżka pliku:",margin}");
                     Console.ForegroundColor = ConsoleColor.Yellow;
                     Console.Write($"\t{INIModel.CurrentFilePath,margin}\n\n");
                     Console.ForegroundColor = ConsoleColor.DarkGray;
-                    
+
                     Thread.Sleep(delay);
                 }
             });
@@ -157,13 +159,7 @@ namespace SekwencjomatTranscoder
 
         public void StopOutput()
         {
-            canAnimate = false;
-        }
-
-        public static void WriteOnBottomLine(string text)
-        {
-            Console.CursorTop = Console.WindowTop + Console.WindowHeight - 1;
-            Console.Write(text);
+            canOutput = false;
         }
     }
 }

@@ -1,14 +1,9 @@
-﻿using IniParser;
-using IniParser.Model;
-using System;
-using System.Collections.Generic;
+﻿using System;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Text;
-using System.Text.RegularExpressions;
-using System.Threading;
 
 
 namespace SekwencjomatTranscoder
@@ -16,7 +11,7 @@ namespace SekwencjomatTranscoder
     class Program
     {
         private static readonly string AssemblyDirectory = Path.GetDirectoryName(Assembly.GetEntryAssembly().Location);
-        private static string OutputDirectory = Path.Combine(AssemblyDirectory, "output");
+        private static readonly string OutputDirectory = Path.Combine(AssemblyDirectory, "output");
         private static string INIPath = string.Empty;
         private static readonly string TemplatePath = Path.Combine(INIPath, "szablon.ini");
 
@@ -30,13 +25,11 @@ namespace SekwencjomatTranscoder
             Console.BackgroundColor = ConsoleColor.Red;
             Console.ForegroundColor = ConsoleColor.Black;
 
-            if(!CheckArgs(args))
+            if (!CheckArgs(args))
             {
-                Console.ReadKey();
+                CheckINIPath();
                 return;
             }
-
-            CheckINIPath();
 
 
             INIModel iniModel = new INIModel(INIPath);
@@ -54,7 +47,6 @@ namespace SekwencjomatTranscoder
             Console.ForegroundColor = ConsoleColor.White;
 
             iniModel.ExecuteFFmpeg();
-
         }
 
         static bool CheckArgs(string[] args)
@@ -115,7 +107,9 @@ namespace SekwencjomatTranscoder
                     key = Console.ReadKey(true).KeyChar.ToString().ToLower();
 
                     if (key == "t" || key == "n")
+                    {
                         break;
+                    }
                 }
                 Console.WriteLine();
                 Console.WriteLine();
@@ -132,7 +126,7 @@ namespace SekwencjomatTranscoder
                 Console.BackgroundColor = ConsoleColor.Red;
                 Console.ForegroundColor = ConsoleColor.Black;
                 Console.WriteLine($"Plik inicjalizacyjny nie został podany bądź nie istnieje.");
-                Console.WriteLine($"Podana ścieżka: [{INIPath}]");
+                Console.WriteLine($"Podana ścieżka: {INIPath}");
                 Console.WriteLine();
                 Console.ReadKey();
                 return;

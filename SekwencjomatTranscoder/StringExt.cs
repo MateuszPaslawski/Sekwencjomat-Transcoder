@@ -1,8 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using System.Text;
 
 namespace SekwencjomatTranscoder
 {
@@ -27,7 +23,14 @@ namespace SekwencjomatTranscoder
 
         public static string TimeSpanConverter(this string input)
         {
-            return input.Replace(":", "-") + "s";
+            if (input == "empty")
+            {
+                return string.Empty;
+            }
+            else
+            {
+                return input.Replace(":", "-") + "s";
+            }
         }
     }
 }
