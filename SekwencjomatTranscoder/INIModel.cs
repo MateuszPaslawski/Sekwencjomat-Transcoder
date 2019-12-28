@@ -243,7 +243,6 @@ namespace SekwencjomatTranscoder
                                         }
 
                                         string outputFileName = $"{output_resolution} {output_bitrate} {output_chroma} {output_fps}".Replace("  ", " ").Trim().Replace(" ", "_");
-
                                         if (outputFileName == string.Empty)
                                             outputFileName = Path.GetFileNameWithoutExtension(InputPath);
 
@@ -258,7 +257,7 @@ namespace SekwencjomatTranscoder
                                         CurrentContainer = output_Container;
                                         CurrentBitrate = output_bitrate;
                                         CurrentResolution = output_resolution;
-                                        CurrentFPS = output_fps;
+                                        CurrentFPS = Regex.Match(output_fps, @"\d.").Value;
                                         CurrentChromaSubsampling = output_chroma;
                                         CurrentFile = ++currentCounter;
                                         RunFFmpegProcess(FFmpegArgs);
