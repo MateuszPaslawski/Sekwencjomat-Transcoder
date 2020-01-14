@@ -10,6 +10,7 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Windows.Forms;
 
 namespace SekwencjomatTranscoder
 {
@@ -141,12 +142,13 @@ namespace SekwencjomatTranscoder
             {
                 string FFmpegArgs = $@"-nostats -loglevel 0 -y -i ""{InputPath}"" -cpu-used {Environment.ProcessorCount} ";
                 string timespan_previousFFmpegArgs = FFmpegArgs;
-                string currentDir = OutputDirectory;
+                //string currentDir = OutputDirectory;
 
                 if (timespan != "empty")
                 {
                     //timespan/
-                    currentDir = Path.Combine(currentDir, timespan.TimeSpanConverter());
+                    
+                    //currentDir = Path.Combine(currentDir, timespan.TimeSpanConverter());
                     int from = int.Parse(timespan.Split(':')[0]);
                     int to = int.Parse(timespan.Split(':')[1]) - from;
                     FFmpegArgs += $"-ss {from} -t {to} ";
@@ -166,7 +168,7 @@ namespace SekwencjomatTranscoder
                     {
                         //timespan/codec
                         output_codec = codec;
-                        currentDir = Path.Combine(currentDir, codec);
+                        //currentDir = Path.Combine(currentDir, codec);
                         FFmpegArgs += $"-vcodec {codec.CodecToFFmpegSyntax()} ";
                         codec_previousFFmpegArgs = FFmpegArgs;
                     }
@@ -183,7 +185,7 @@ namespace SekwencjomatTranscoder
                         {
                             //timespan/codec/container
                             output_Container = container;
-                            currentDir = Path.Combine(currentDir, container);
+                            //currentDir = Path.Combine(currentDir, container);
                         }
 
 
@@ -213,11 +215,12 @@ namespace SekwencjomatTranscoder
                                 if (resolution != "empty")
                                 {
                                     output_resolution = resolution;
-                                    FFmpegArgs += $"-vf scale={resolution.Replace('x',':')} ";
+                                    FFmpegArgs += $"-vf \"scale={resolution.Replace('x',':')}\" ";
                                     resolution_previousFFmpegArgs = FFmpegArgs;
                                 }
 
 
+                                 
                                 foreach (string fps in ListOfFPS)
                                 {
                                     FFmpegArgs = resolution_previousFFmpegArgs;
@@ -228,9 +231,16 @@ namespace SekwencjomatTranscoder
                                     if (fps != "empty")
                                     {
                                         output_fps = $"[{fps}fps]";
-                                        FFmpegArgs += $"-filter:v fps=fps={fps} ";
+
+                                        if(FFmpegArgs.Contains("scale="))
+                                            FFmpegArgs.Replace($"scale=", $"fps={fps}, scale=");
+                                        else
+                                            FFmpegArgs += $"-vf \"fps={fps}\" ";
+
                                         fps_previousFFmpegArgs = FFmpegArgs;
                                     }
+
+
 
                                     foreach (string chroma in ListOfChromaSubsampling)
                                     {
@@ -246,12 +256,17 @@ namespace SekwencjomatTranscoder
                                             chroma_previousFFmpegArgs = FFmpegArgs;
                                         }
 
-                                        string outputFileName = $"{output_resolution} {output_bitrate} {output_chroma} {output_fps}".Replace("  ", " ").Trim().Replace(" ", "_");
+                                        string outputFileName = $"{output_resolution} {output_bitrate} {output_chroma} {output_fps}".Trim();
+                                        outputFileName = Regex.Replace(outputFileName, @"\s{2,}", " ").Replace(" ", "_");
+
                                         if (outputFileName == string.Empty)
                                             outputFileName = Path.GetFileNameWithoutExtension(InputPath);
 
-                                        string outputPath = $"{outputFileName}.{output_Container.RemoveString(".")}";
+                                        string currentDir = Path.Combine(OutputDirectory, timespan.TimeSpanConverter(), codec, container);
                                         Directory.CreateDirectory(currentDir);
+
+                                        string outputPath = $"{outputFileName}.{output_Container.RemoveString(".")}";
+
                                         outputPath = Path.Combine(currentDir, outputPath);
                                         FFmpegArgs += $"\"{outputPath}\"";
 
