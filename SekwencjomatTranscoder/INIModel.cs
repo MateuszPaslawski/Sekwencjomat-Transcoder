@@ -233,7 +233,7 @@ namespace SekwencjomatTranscoder
                                         output_fps = $"[{fps}fps]";
 
                                         if(FFmpegArgs.Contains("scale="))
-                                            FFmpegArgs.Replace($"scale=", $"fps={fps}, scale=");
+                                            FFmpegArgs = FFmpegArgs.Replace("scale=", $"fps={fps}, scale=");
                                         else
                                             FFmpegArgs += $"-vf \"fps={fps}\" ";
 
